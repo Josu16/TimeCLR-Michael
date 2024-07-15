@@ -1,1 +1,9 @@
 UCRArchive_2018/*
+
+config/file/*
+
+model/*
+result/*
+result_agg/*
+
+__pycache__/

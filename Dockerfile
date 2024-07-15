@@ -19,5 +19,5 @@ RUN apt-get update && apt-get install -y \
     RUN mkdir /opt/code
     WORKDIR /opt/code
     
-    # COPY requirements.txt /opt/code/requirements.txt
-    # RUN pip install -r /opt/code/requirements.txt
+    COPY requirements.txt /opt/code/requirements.txt
+    RUN pip install -r /opt/code/requirements.txt

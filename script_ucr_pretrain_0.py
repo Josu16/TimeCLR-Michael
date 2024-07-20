@@ -21,10 +21,15 @@ def main_wrapper():
     parser.add_argument('--data_name',
                         default='ucr_00')
     parser.add_argument('--method_name')
+    parser.add_argument('--gpu_id', type=int, default=0, 
+                        help='ID de la GPU a usar (por defecto es 0)')
 
     args = parser.parse_args()
     data_name = args.data_name
     method_name = args.method_name
+    gpu_id = args.gpu_id
+
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
 
     main(data_name, method_name)
 

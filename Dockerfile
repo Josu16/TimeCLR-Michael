@@ -15,6 +15,7 @@ RUN apt-get update && apt-get install -y \
     wget \
     unzip \
     graphviz \
+    alpine-pico \
     && apt-get clean
 
     RUN mkdir /opt/code

@@ -11,6 +11,7 @@ from .ts2vec_enc_0 import TS2VecEncoder
 from .mixup_enc_0 import MixingUpEncoder
 from .simclr_enc_0 import SimCLREncoder
 from .timeclr_enc_0 import TimeCLREncoder
+from .mae_enc_0 import MAEEncoder
 from .resnet1d_1 import ResNet1D as ResNet1D_1
 from .rnnet_0 import RNNet
 from .transformer_1 import Transformer
@@ -158,6 +159,11 @@ def get_classifier(model_config, encoder):
         encoder, n_class, n_dim=n_dim, n_layer=n_layer)
     return model
 
+def get_mae(model_config, encoder):
+    mask_ratio = float(model_config['mae']['mask_ratio'])
+    encoder_ = MAEEncoder(encoder, mask_ratio=mask_ratio)
+    encoder_ = load_pretrain(model_config['mae'], encoder_)
+    return encoder_
 
 def get_model(model_config):
     model_name = model_config['model']['model_name']
@@ -193,6 +199,9 @@ def get_model(model_config):
     elif 'timeclr' in model_name:
         print('  get timeclr')
         encoder = get_timeclr(model_config, encoder)
+    elif 'mae' in model_name:
+        print('  get mae')
+        encoder = get_mae(model_config, encoder)
 
     if 'classifier' in model_name:
         print('  get classifier')

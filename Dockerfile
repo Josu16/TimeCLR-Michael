@@ -16,6 +16,7 @@ RUN apt-get update && apt-get install -y \
     unzip \
     graphviz \
     alpine-pico \
+    tmux \
     && apt-get clean
 
     RUN mkdir /opt/code

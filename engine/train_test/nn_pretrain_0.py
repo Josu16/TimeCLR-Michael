@@ -55,11 +55,18 @@ def _timefreq_encoder_forward(model, idx_batch, data):
 
 def _simclr_encoder_forward(model, idx_batch, data):
     data_batch = data[idx_batch, :, :]
+    print("----- vector 0 (entrada) shape ", data_batch.shape)
+    print("----- vector 0 (entrada) type ", type(data_batch))
     ts_emb_aug_0 = model.forward(
         data_batch, normalize=False, to_numpy=False, is_augment=True)
     ts_emb_aug_1 = model.forward(
         data_batch, normalize=False, to_numpy=False, is_augment=True)
     loss_fun = NTXentLoss()
+    # print("------ vector 1 shape", ts_emb_aug_0.shape) 
+    # print("------ vector 1 type", type(ts_emb_aug_0))
+    # print("------ vector 2 shape", ts_emb_aug_0.shape)
+    # print("------ vector 2 type", type(ts_emb_aug_1))
+    # sjdjddj
     loss = loss_fun(ts_emb_aug_0, ts_emb_aug_1)
     return loss
 
@@ -90,6 +97,41 @@ def _mixup_encoder_forward(model, idx_batch, data):
         data_batch, normalize=False, to_numpy=False, is_augment=True)
     loss_fun = MixupLoss()
     loss = loss_fun(ts_emb_0, ts_emb_1, ts_emb_aug, lam)
+    return loss
+
+def _mae_encoder_forward(model, idx_batch, data):
+    data_batch = data[idx_batch, :, :]
+    ts_emb_1, mask = model.forward(
+        data_batch, normalize=False, to_numpy=False, is_augment=True)
+    ts_emb_2, mask = model.forward(
+        data_batch, normalize=False, to_numpy=False, is_augment=True)
+    loss = _mae_loss(ts_emb_1, ts_emb_2, mask)
+    return loss
+
+def _mae_loss(original, reconstructed, mask):
+    # print("FORMA DE LA TS ORIGINAL", original.shape)
+    # print("FORMA DE LA reconstruida", reconstructed.shape)
+    # print("FORMA DE LA MASCARA", mask.shape)
+
+    # print("TIPO DE LA TS ORIGINAL", type(original))
+    # print("TIPO DE LA reconstruida", type(reconstructed))
+    # print("TIPO DE LA MASCARA", type(mask))
+
+    if isinstance(original, np.ndarray):
+        original = torch.tensor(original, dtype=torch.float32, requires_grad=True)
+
+    if isinstance(reconstructed, np.ndarray):
+        reconstructed = torch.tensor(reconstructed, dtype=torch.float32, requires_grad=True)
+    
+    if isinstance(mask, np.ndarray):
+        mask = torch.tensor(mask, dtype=torch.float32, requires_grad=True)
+
+    # Calcular la diferencia solo en las posiciones enmascaradas
+    masked_diff = (original - reconstructed) * mask
+    
+    # Calcular la pérdida como el promedio de los errores cuadrados en las posiciones enmascaradas
+    loss = torch.mean(masked_diff ** 2)
+    
     return loss
 
 
@@ -181,6 +223,10 @@ def nn_pretrain(data, model, model_path, train_config, device):
                         model, idx_batch, data)
                 elif pretrain_name == 'timeclr':
                     loss = _timeclr_encoder_forward(
+                        model, idx_batch, data)
+                elif pretrain_name == 'mae':
+                    # print("ejecución de MAE")
+                    loss = _mae_encoder_forward(
                         model, idx_batch, data)
                 else:
                     raise Exception(

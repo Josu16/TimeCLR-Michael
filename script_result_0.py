@@ -8,12 +8,18 @@ import os
 import numpy as np
 import scipy.stats
 from engine.data_io import get_ucr_data_names
+import pandas as pd
 
 
 def get_acc(result_agg_path):
-    pkl = np.load(result_agg_path)
-    acc_valid = pkl['acc_valid']
-    acc_test = pkl['acc_test']
+    try:
+        pkl = np.load(result_agg_path)
+        acc_valid = pkl['acc_valid']
+        acc_test = pkl['acc_test']
+    except:
+        acc_test = 999
+        acc_valid = 999
+    
     return acc_test, acc_valid
 
 
@@ -95,6 +101,65 @@ def print_table(method_names, data_config_name, get_data_names,
         print(f'{val:f},', end='')
     print()
 
+def create_file(method_names, data_config_name, get_data_names, base_map, print_dataset=True):
+    print(',', end='')
+    for _, method_name in method_names:
+        print(f'{method_name},', end='')
+    print()
+
+    columns_names = [sublista[0] for sublista in method_names]
+    columns_names.insert(0, "Dataset")
+    print("numero de columnas", len(columns_names))
+
+    results = pd.DataFrame(columns=columns_names)
+
+    data_names = get_data_names()
+    mean_rank = []
+    for data_name in data_names:
+        result_dir = os.path.join(
+            '.', 'result_agg', f'{data_config_name}_{data_name}')
+        if print_dataset:
+            print(f'{data_name},', end='')
+        acc_tests = []
+        for method_name, _ in method_names:
+            result_path = os.path.join(
+                result_dir, f'{method_name}.npz')
+            if 'dist' in method_name:
+                acc_test, _ = get_acc(result_path)
+            else:
+                acc_test_0, acc_valid_0 = get_acc(
+                    result_path)
+                arch = method_name[:3]
+                base_name = base_map[arch]
+                result_path = os.path.join(
+                    result_dir, f'{base_name}.npz')
+                acc_test_1, acc_valid_1 = get_acc(
+                    result_path)
+                if acc_valid_0 > acc_valid_1:
+                    acc_test = acc_test_0
+                else:
+                    acc_test = acc_test_1
+
+            acc_tests.append(acc_test)
+
+        rank_tests = scipy.stats.rankdata(-np.array(acc_tests))
+        print("tipo---", type(acc_tests))
+        results.loc[len(results)] = [data_name] + acc_tests
+        print(len(acc_tests))
+        mean_rank.append(rank_tests)
+        # if print_dataset:
+        #     for acc_test in acc_tests:
+        #         print(f'{acc_test:f},', end='')
+        #     print()
+
+    mean_rank = np.array(mean_rank)
+    mean_rank = np.mean(mean_rank, axis=0)
+    print(f'Average Rank,', end='')
+    for val in mean_rank:
+        print(f'{val:f},', end='')
+    print()
+
+    results.to_csv("resultados.csv")
 
 def main():
     arcts = ['lst', 'gru', 'r1d', 'trf', ]
@@ -103,8 +168,8 @@ def main():
                 'r1d': 'r1d_c_0000', 'trf': 'trf_c_0000', }
 
     pt_tamps = ['_sc_c_0000', '_tv_c_0000',
-                '_mu_c_0000', '_tf_c_0000', '_tc_c_0000', ]
-    pt_names = ['SimCLR', 'TS2Vec', 'MixingUp',  'TF-C',  'TimeCLR', ]
+                '_mu_c_0000', '_tf_c_0000', '_tc_c_0000', '_ma_c_0000']
+    pt_names = ['SimCLR', 'TS2Vec', 'MixingUp',  'TF-C',  'TimeCLR', 'MAE']
 
     method_names = [
         ['dist_0000', 'ED', ],
@@ -118,7 +183,7 @@ def main():
 
     print_dataset = True
     get_data_names = get_ucr_data_names
-    print_table(method_names, 'ucr_00', get_data_names,
+    create_file(method_names, 'ucr_00', get_data_names,
                 base_map, print_dataset=print_dataset)
 
 

@@ -34,12 +34,16 @@ config = RobertaConfig(
 )
 model = RobertaModel(config).to(device)
 
+print(model)
+
+print(model.num_parameters())
+
 # Definir la función de pérdida y el optimizador
 criterion = nn.MSELoss()  # Por ejemplo, MSE para series temporales
 optimizer = optim.Adam(model.parameters(), lr=1e-4)
 
 # Paso 4: Entrenamiento (esquemático)
-for epoch in range(10):  # Número de épocas
+for epoch in range(100):  # Número de épocas
     for batch in dataloader:
         masked_data, mask = mask_data(batch[0])  # Enmascarar datos
         optimizer.zero_grad()
@@ -50,3 +54,4 @@ for epoch in range(10):  # Número de épocas
     print(f'Epoch {epoch+1}, Loss: {loss.item()}')
 
 print("Entrenamiento completado")
+torch.save(model, 'roberta_pretrained_model.pth')

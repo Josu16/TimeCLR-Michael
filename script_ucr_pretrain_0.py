@@ -3,7 +3,7 @@
 @author: 
 """
 
-
+import numpy as np
 import os
 import copy
 import argparse
@@ -30,7 +30,8 @@ def main_wrapper():
     gpu_id = args.gpu_id
 
     os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
-
+    print("NOMBRE DEL M??TODO")
+    print(method_name)
     main(data_name, method_name)
 
 
@@ -58,11 +59,22 @@ def main(data_config_name, method_name):
         model_dir, f'{method_name}_{fmt_str}.npz')
 
     dataset = load_dataset(data_config)
+    jslkfjjsafjljf
+    np.save("tscds.npy", dataset)
+
+    # return 0
+
+    print("Forma del dataset")
+    print(dataset.shape) ## 128 (batch size), 1 (dimensionaes), 512 (npi)
     method_config['in_dim'] = dataset.shape[1]
     method_config['data_len'] = dataset.shape[2]
     model = get_model(method_config)
-    nn_pretrain(dataset, model, model_path,
-                method_config['train'], device)
+    print("pretrain_name")
+    print(model.pretrain_name)
+    print("el modelo:")
+    print(type(model))
+    print(model)
+    nn_pretrain(dataset, model, model_path, method_config['train'], device)
 
 
 if __name__ == '__main__':

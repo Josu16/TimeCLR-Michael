@@ -6,4 +6,6 @@ model/*
 result/*
 result_agg/*
 
+respaldo_tclr/*
+
 __pycache__/

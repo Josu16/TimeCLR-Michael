@@ -170,7 +170,22 @@ def load_ucr_pretrain(data_config):
             data_i[:, :, :data_len] = pretrain_data[i]
             pretrain_data[i] = data_i
     pretrain_data = np.concatenate(pretrain_data, axis=0)
+
+    save_datasets(dataset, pretrain_data)
+
     return pretrain_data
+
+def save_datasets(dataset, pretrain_data):
+    np.save("pretrain.npy", pretrain_data)
+
+    np.save("data_train.npy", dataset["data_train"])
+    np.save("label_train.npy", dataset["label_train"])
+
+    np.save("data_valid.npy", dataset["data_valid"])
+    np.save("label_valid.npy", dataset["label_valid"])
+
+    np.save("data_test.npy", dataset["data_test"])
+    np.save("label_test.npy", dataset["label_test"])
 
 
 def get_ucr_data_names():

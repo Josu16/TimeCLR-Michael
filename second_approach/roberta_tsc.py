@@ -7,6 +7,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from transformers import RobertaConfig, RobertaModel
 from TSTransformer import Transformer
+from scipy import signal
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
@@ -21,12 +22,212 @@ def mask_data(data, mask_prob=0.15):
     masked_data[mask] = 0  # Asignar cero a los valores enmascarados
     return masked_data, mask
 
+def get_dataset(route, name, norm = True,  max_len = 512):
+    train_path = route + '/' + name + '/' + name + "_TRAIN.tsv"
+    test_path = route + '/' + name + '/' + name + "_TEST.tsv"
 
+    print(train_path)
+
+    dataset = np.concatenate(
+            (np.loadtxt(train_path), np.loadtxt(test_path)),
+            axis=0
+        )
+
+    # spec del dataset
+    rows = dataset.shape[0]
+    ts_len = dataset.shape[1] - 1
+
+    # aislar la columna de etiquetas
+    labels = dataset[:, 0].astype(int)
+    # aislar el resto del dataset
+    data = dataset[:, 1:]
+    # expandir el dataset a las dimensiones que espera el codificador
+    data = np.expand_dims(data, 1)
+
+    if ts_len != max_len:
+        # resampleo con transformada de Fourier
+        data = signal.resample(data, max_len, axis = 2)  
+    
+    print(data.shape)
+    print(labels.shape)
+    
+    return data, ts_len
+
+def _normalize_dataset(data):
+    data_mu = np.mean(data, axis=2, keepdims=True)
+    data_sigma = np.std(data, axis=2, keepdims=True)
+    data_sigma[data_sigma <= 0] = 1
+    data = (data - data_mu) / data_sigma
+    return data
+## --------------------------- Configuración del dataset --------------------------------
 data = np.load('../pretrain.npy')  # Cargar los datos desde el archivo .npy
-data = torch.tensor(data, dtype=torch.float32).to(device)  # Convertir los datos a un tensor de PyTorch
+
+print("primera fila del dataset", data[0, :, :])
+pretrain_data = torch.tensor(data, dtype=torch.float32).to(device)  # Convertir los datos a un tensor de PyTorch
+
+np.random.seed(666)
+
+# data_names = np.array([
+#         'Adiac',
+#         'ArrowHead',
+#         'Beef',
+#         'BeetleFly',
+#         'BirdChicken',
+#         'Car',
+#         'CBF',
+#         'ChlorineConcentration',
+#         'CinCECGTorso',
+#         'Coffee',
+#         'Computers',
+#         'CricketX',
+#         'CricketY',
+#         'CricketZ',
+#         'DiatomSizeReduction',
+#         'DistalPhalanxOutlineAgeGroup',
+#         'DistalPhalanxOutlineCorrect',
+#         'DistalPhalanxTW',
+#         'Earthquakes',
+#         'ECG200',
+#         'ECG5000',
+#         'ECGFiveDays',
+#         'ElectricDevices',
+#         'FaceAll',
+#         'FaceFour',
+#         'FacesUCR',
+#         'FiftyWords',
+#         'Fish',
+#         'FordA',
+#         'FordB',
+#         'GunPoint',
+#         'Ham',
+#         'HandOutlines',
+#         'Haptics',
+#         'Herring',
+#         'InlineSkate',
+#         'InsectWingbeatSound',
+#         'ItalyPowerDemand',
+#         'LargeKitchenAppliances',
+#         'Lightning2',
+#         'Lightning7',
+#         'Mallat',
+#         'Meat',
+#         'MedicalImages',
+#         'MiddlePhalanxOutlineAgeGroup',
+#         'MiddlePhalanxOutlineCorrect',
+#         'MiddlePhalanxTW',
+#         'MoteStrain',
+#         'NonInvasiveFetalECGThorax1',
+#         'NonInvasiveFetalECGThorax2',
+#         'OliveOil',
+#         'OSULeaf',
+#         'PhalangesOutlinesCorrect',
+#         'Phoneme',
+#         'Plane',
+#         'ProximalPhalanxOutlineAgeGroup',
+#         'ProximalPhalanxOutlineCorrect',
+#         'ProximalPhalanxTW',
+#         'RefrigerationDevices',
+#         'ScreenType',
+#         'ShapeletSim',
+#         'ShapesAll',
+#         'SmallKitchenAppliances',
+#         'SonyAIBORobotSurface1',
+#         'SonyAIBORobotSurface2',
+#         'StarLightCurves',
+#         'Strawberry',
+#         'SwedishLeaf',
+#         'Symbols',
+#         'SyntheticControl',
+#         'ToeSegmentation1',
+#         'ToeSegmentation2',
+#         'Trace',
+#         'TwoLeadECG',
+#         'TwoPatterns',
+#         'UWaveGestureLibraryAll',
+#         'UWaveGestureLibraryX',
+#         'UWaveGestureLibraryY',
+#         'UWaveGestureLibraryZ',
+#         'Wafer',
+#         'Wine',
+#         'WordSynonyms',
+#         'Worms',
+#         'WormsTwoClass',
+#         'Yoga',
+#         'ACSF1',
+#         'AllGestureWiimoteX',
+#         'AllGestureWiimoteY',
+#         'AllGestureWiimoteZ',
+#         'BME',
+#         'Chinatown',
+#         'Crop',
+#         'DodgerLoopDay',
+#         'DodgerLoopGame',
+#         'DodgerLoopWeekend',
+#         'EOGHorizontalSignal',
+#         'EOGVerticalSignal',
+#         'EthanolLevel',
+#         'FreezerRegularTrain',
+#         'FreezerSmallTrain',
+#         'Fungi',
+#         'GestureMidAirD1',
+#         'GestureMidAirD2',
+#         'GestureMidAirD3',
+#         'GesturePebbleZ1',
+#         'GesturePebbleZ2',
+#         'GunPointAgeSpan',
+#         'GunPointMaleVersusFemale',
+#         'GunPointOldVersusYoung',
+#         'HouseTwenty',
+#         'InsectEPGRegularTrain',
+#         'InsectEPGSmallTrain',
+#         'MelbournePedestrian',
+#         'MixedShapesRegularTrain',
+#         'MixedShapesSmallTrain',
+#         'PickupGestureWiimoteZ',
+#         'PigAirwayPressure',
+#         'PigArtPressure',
+#         'PigCVP',
+#         'PLAID',
+#         'PowerCons',
+#         'Rock',
+#         'SemgHandGenderCh2',
+#         'SemgHandMovementCh2',
+#         'SemgHandSubjectCh2',
+#         'ShakeGestureWiimoteZ',
+#         'SmoothSubspace',
+#         'UMD'
+#     ])
+# total_datasets = len(data_names)
+# pretrain_size = int(total_datasets * 0.65)
+
+# index = np.random.permutation(total_datasets)
+
+# pretrain_index = index[:pretrain_size]
+
+# pretrain_data = data_names[pretrain_index]
+
+# remaining_index = index[pretrain_size:]
+# data_names = data_names[remaining_index]
+
+
+# pretrain_data = []
+# for data_name in data_names:
+#     dataset, ts_len = get_dataset("../UCRArchive_2018", data_name)
+#     data_pretrain = _normalize_dataset(dataset)
+#     pretrain_data.append(data_pretrain)
+
+# pretrain_data = np.concatenate(pretrain_data, axis=0)
+
+# print("tamaño del pretrain (ahora está completo) ", pretrain_data.shape)
+# pretrain_data = torch.tensor(pretrain_data, dtype=torch.float32).to(device)  # Convertir los datos a un tensor de PyTorch
+
+
+# print("primera fila del dataset", pretrain_data[0, :, :])
+## ----------------------- FIN Configuración del dataset --------------------------------
+
 
 batch_size = 128  # Definir el tamaño del batch
-dataset = TensorDataset(data)
+dataset = TensorDataset(pretrain_data)
 dataloader = DataLoader(dataset, batch_size=batch_size, shuffle=True)
 
 

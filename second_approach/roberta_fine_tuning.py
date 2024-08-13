@@ -93,7 +93,7 @@ def get_dataset(route, name, norm = True,  max_len = 512):
     return data, labels
 
 # Cargar el modelo preentrenado
-model = torch.load('roberta_pretrained_model_v2-custom-trf.pth')
+model = torch.load('roberta_pretrained_model_v1-custom-trf.pth')
 model.to(device)
 print("tipo de dato: ", type(model))
 
@@ -233,6 +233,8 @@ names = [
     ]
 
 for data_name in names:
+    print("Dataset: ", data_name)
+
     data, labels = get_dataset("../UCRArchive_2018",data_name)
 
     labels, n_class = _relabel(labels)
@@ -254,32 +256,25 @@ for data_name in names:
     valid_size = valid_frac / remaining_frac
     test_size = test_frac / remaining_frac
 
-    valid_data, test_data, valid_labels, test_labels = train_test_split(
-        tmp_data, tmp_labels, train_size = valid_size, stratify = tmp_labels, random_state = 666
-    )
+    try:
+        valid_data, test_data, valid_labels, test_labels = train_test_split(
+            tmp_data, tmp_labels, train_size = valid_size, stratify = tmp_labels, random_state = 666
+        )
+    except Exception as e:
+        # Podría ocurrir que el número de clases no alcancen para estratificar
+        print(e)
+        valid_data, test_data, valid_labels, test_labels = train_test_split(
+            tmp_data, tmp_labels, train_size = valid_size, random_state = 666
+        )
+        # agregar más detalles de la distribución de clases.
 
     print("Size of train: ", train_data.shape)
     print("Size of validation: ", valid_data.shape)
     print("Size of test: ", test_data.shape)
 
 
-    data = np.load('../pretrain.npy')
-    data = torch.tensor(data, dtype=torch.float32).to(device)
-
-    # train_data = np.load("data_train.npy")
-    # train_data = torch.tensor(train_data, dtype=torch.float32).to(device)
-    # train_labels = np.load("label_train.npy")
-    # train_labels = torch.tensor(train_labels, dtype=torch.float32).to(device)
-
-    # valid_data = np.load("data_valid.npy")
-    # valid_data = torch.tensor(valid_data, dtype=torch.float32).to(device)
-    # valid_labels = np.load("label_valid.npy")
-    # valid_labels = torch.tensor(valid_labels, dtype=torch.float32).to(device)
-
-    # test_data = np.load("data_test.npy")
-    # test_data = torch.tensor(test_data, dtype=torch.float32).to(device)
-    # test_labels = np.load("label_test.npy")
-    # test_labels = torch.tensor(test_labels, dtype=torch.float32).to(device)
+    # data = np.load('../pretrain.npy')
+    # data = torch.tensor(data, dtype=torch.float32).to(device)
 
 
     ## -------------------- PREPROCESAMIENTO DE LAS SEREIS ------------------------------
@@ -287,10 +282,6 @@ for data_name in names:
     train_data = _normalize_dataset(train_data)
 
     ## -------------------- PREPARACIÓN DEL MODELO ------------------------------
-
-    
-
-    
 
     # parámetros del clasificador
 
@@ -311,7 +302,7 @@ for data_name in names:
     batch_size = 64
     n_iter = np.ceil((n_data / batch_size))
     n_iter = int(n_iter)
-    n_epoch = 400
+    n_epoch = 10
 
     loss_train = np.zeros(n_epoch)
     toc_train = np.zeros(n_epoch)
@@ -433,4 +424,4 @@ for data_name in names:
         'Test Accuracy': test_accuracy
     }, ignore_index=True)
 
-results_df.to_csv("Resultados_segundo_enfoque_v2.csv")
+results_df.to_csv("Resultados_segundo_enfoque_v0.csv")
